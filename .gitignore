@@ -1,0 +1,55 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Temporary files
+temp_files/
+*.tmp
+*.log
+
+# Environment variables
+.env
+
+# Virtual environment
+.venv/
+env/
+venv/
+ENV/
+
+# Jupyter/IPython
+.ipynb_checkpoints/
+
+# VS Code settings
+.vscode/
+
+# macOS and Linux
+.DS_Store
+Thumbs.db
+
+# Python-specific
+*.egg-info/
+.eggs/
+*.egg
+
+# Streamlit generated cache
+.streamlit/
+
+# pip dependency file lock
+poetry.lock
+Pipfile.lock
+
+# Data and output
+*.csv
+*.xlsx
+*.json
+*.db
+*.sqlite
+
+# PyInstaller
+*.spec
+dist/
+build/
+
+# Plotly auto-save files
+*.plotly.*
