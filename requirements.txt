@@ -1,0 +1,9 @@
+streamlit
+pandas
+openai
+anthropic
+python-dotenv
+pdfplumber
+langchain
+unstructured
+plotly
