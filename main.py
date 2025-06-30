@@ -8,6 +8,8 @@ import pandas as pd
 import plotly.express as px
 from multi_file_ingestion import load_and_split_resume
 import plotly.graph_objects as go
+from fpdf import FPDF
+
 
 # Load environment variables
 load_dotenv(override=True)
@@ -106,6 +108,46 @@ List the missing skills only as bullet points.
     except:
         return "N/A"
 
+#AI Chat assistant for Resume Feedback
+
+def answer_resume_query(resume_text, jd_text, user_question, model="groq"):
+    prompt = f"""
+You are an AI career assistant. A candidate has asked a question about improving their resume based on the job description.
+
+Resume:
+{resume_text}
+
+Job Description:
+{jd_text}
+
+Question:
+{user_question}
+
+Answer in a clear, personalized, helpful tone.
+"""
+    try:
+        if model == "groq":
+            groq = OpenAI(api_key=groq_api_key, base_url="https://api.groq.com/openai/v1")
+            response = groq.chat.completions.create(
+                model="llama3-8b-8192",
+                messages=[
+                    {"role": "system", "content": "You are a professional resume coach."},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+        else:
+            gemini = OpenAI(api_key=google_api_key, base_url="https://generativelanguage.googleapis.com/v1beta/openai/")
+            response = gemini.chat.completions.create(
+                model="gemini-2.0-flash",
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return f"⚠️ Error: {e}"
+
+
 # Resume improvement suggestions
 def suggest_improvements(resume_text, jd_text):
     prompt = f"""
@@ -172,93 +214,164 @@ def get_groq_match(prompt):
     except:
         return 0
 
+def generate_pdf(candidate_name, avg_score, scores, summary, skills, suggestions):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(200, 10, txt="Hirely Pro - Resume Match Report", ln=True, align="C")
+
+    pdf.set_font("Arial", size=12)
+    pdf.ln(10)
+    pdf.cell(200, 10, txt=f"Candidate: {candidate_name}", ln=True)
+    pdf.cell(200, 10, txt=f"Average Match Score: {avg_score}%", ln=True)
+
+    pdf.ln(5)
+    pdf.cell(200, 10, txt="Model Scores:", ln=True)
+    for model, score in scores.items():
+        pdf.cell(200, 10, txt=f"{model}: {score}%", ln=True)
+
+    pdf.ln(5)
+    pdf.multi_cell(0, 10, f"Summary:\n{summary}")
+    pdf.ln(2)
+    pdf.multi_cell(0, 10, f"Missing Skills:\n{skills}")
+    pdf.ln(2)
+    pdf.multi_cell(0, 10, f"Suggestions:\n{suggestions}")
+
+    output_path = "temp_files/report.pdf"
+    pdf.output(output_path)
+    return output_path
+
+
 # ==== UI with Tabs ====
 tab1, tab2 = st.tabs(["📁 Upload Files", "📊 View Results"])
 
 with tab1:
     st.header("📂 Upload Resume & Job Description")
 
-    resume_file = st.file_uploader("📄 Upload Resume", type=None)
+    resume_files = st.file_uploader("📄 Upload Resume(s) — Upload 2 or 3 versions", type=None, accept_multiple_files=True)
+
     jd_file = st.file_uploader("📝 Upload Job Description", type=None)
 
-    if st.button("🔍 Analyze Fit") and resume_file and jd_file:
+    if st.button("🔍 Analyze Fit") and resume_files and jd_file:
         with st.spinner("Analyzing..."):
             os.makedirs("temp_files", exist_ok=True)
 
-            resume_path = os.path.join("temp_files", resume_file.name)
-            with open(resume_path, "wb") as f:
-                f.write(resume_file.getbuffer())
-            resume_docs = load_and_split_resume(resume_path)
-            resume_text = "\n".join([doc.page_content for doc in resume_docs])
-
+            # Process JD
             jd_path = os.path.join("temp_files", jd_file.name)
             with open(jd_path, "wb") as f:
                 f.write(jd_file.getbuffer())
             jd_docs = load_and_split_resume(jd_path)
             jd_text = "\n".join([doc.page_content for doc in jd_docs])
 
-            candidate_name = extract_candidate_name(resume_text)
-            prompt = build_prompt(resume_text, jd_text)
+            all_scores = {}
+            resume_details = []
 
-            scores = {
-                "Google Gemini": get_google_match(prompt),
-                "Groq LLaMA3": get_groq_match(prompt),
-            }
+            for resume_file in resume_files:
+                resume_path = os.path.join("temp_files", resume_file.name)
+                with open(resume_path, "wb") as f:
+                    f.write(resume_file.getbuffer())
+                resume_docs = load_and_split_resume(resume_path)
+                resume_text = "\n".join([doc.page_content for doc in resume_docs])
 
-            summary = generate_summary(resume_text)
-            skills_missing = extract_skill_gap(resume_text, jd_text)
-            suggestions = suggest_improvements(resume_text, jd_text)
+                prompt = build_prompt(resume_text, jd_text)
 
-            st.session_state.scores = scores
-            st.session_state.candidate_name = candidate_name
-            st.session_state.avg_score = round(sum(scores.values()) / len(scores), 2)
-            st.session_state.summary = summary
-            st.session_state.skills_missing = skills_missing
-            st.session_state.suggestions = suggestions
-            st.success("✅ Analysis Complete! Go to '📊 View Results' tab.")
+                candidate_name = extract_candidate_name(resume_text)
+                summary = generate_summary(resume_text)
+                skills_missing = extract_skill_gap(resume_text, jd_text)
+                suggestions = suggest_improvements(resume_text, jd_text)
+
+                scores = {
+                    "Google Gemini": get_google_match(prompt),
+                    "Groq LLaMA3": get_groq_match(prompt),
+                }
+
+                avg_score = round(sum(scores.values()) / len(scores), 2)
+
+                all_scores[resume_file.name] = {
+                    "Candidate": candidate_name,
+                    "Avg": avg_score,
+                    "Scores": scores,
+                    "Summary": summary,
+                    "Skills": skills_missing,
+                    "Suggestions": suggestions
+                }
+
+            st.session_state.all_scores = all_scores
+            st.success("✅ All Resumes Analyzed! Go to '📊 View Results' tab.")
+
 
 with tab2:
     st.header("📊 Match Result Overview")
 
-    if "scores" in st.session_state:
-        scores = st.session_state.scores
-        avg_score = st.session_state.avg_score
-        name = st.session_state.candidate_name
+    if "all_scores" in st.session_state:
+        all_scores = st.session_state.all_scores
+        best_resume = max(all_scores.items(), key=lambda x: x[1]["Avg"])
 
-        df = pd.DataFrame(list(scores.items()), columns=["Model", "Match %"]).sort_values("Match %", ascending=False)
+        st.subheader("📈 Best Resume Recommendation")
+        st.success(f"🏆 `{best_resume[0]}` is the best match with `{best_resume[1]['Avg']}%` score.")
 
-        col1, col2 = st.columns([2, 1])
-        with col1:
-            st.subheader("📋 Candidate Summary")
-            st.markdown(f"**👤 Name:** `{name}`")
-            st.markdown(f"**📈 Average Score:** `{avg_score}%`")
-            st.markdown("---")
-            st.markdown(f"**🧠 Summary:**\n{st.session_state.summary}")
-            st.markdown("---")
-            st.markdown(f"**📌 Missing Skills:**\n{st.session_state.skills_missing}")
-            st.markdown("---")
-            st.markdown(f"**💡 Suggestions:**\n{st.session_state.suggestions}")
+        resume_df = pd.DataFrame([
+            {
+                "Resume File": name,
+                "Candidate": data["Candidate"],
+                "Avg Score": data["Avg"],
+                **data["Scores"]
+            } for name, data in all_scores.items()
+        ])
 
-        with col2:
-            st.metric(label="📊 Avg. Match %", value=f"{avg_score:.2f}%")
+        st.dataframe(resume_df, use_container_width=True)
 
-        st.markdown("---")
-        st.subheader("🔢 Model-wise Results")
-        st.dataframe(df, use_container_width=True)
-
-        st.subheader("📈 Visual Comparison")
-        fig = px.bar(df, x="Model", y="Match %", text="Match %", color="Model", title="Resume Fit Score by Model", height=400)
-        fig.update_traces(textposition='outside')
+        fig = px.bar(resume_df, x="Resume File", y="Avg Score", text="Avg Score", color="Resume File")
         st.plotly_chart(fig, use_container_width=True)
 
-        st.subheader("🕸️ Radar Chart - Fit Factors")
-        radar_fig = go.Figure(data=go.Scatterpolar(
-            r=[avg_score, avg_score - 10, avg_score - 5, avg_score - 15],
-            theta=['Technical Skills', 'Experience Fit', 'Soft Skills', 'Domain Fit'],
-            fill='toself',
-            name='Fit Factors'
-        ))
-        radar_fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), showlegend=False)
-        st.plotly_chart(radar_fig, use_container_width=True)
+        # Show individual resume details
+        selected_resume = st.selectbox("📝 Select a Resume to View Details", list(all_scores.keys()))
+        res = all_scores[selected_resume]
+
+        st.markdown(f"**👤 Candidate:** `{res['Candidate']}`")
+        st.markdown(f"**📈 Avg. Score:** `{res['Avg']}%`")
+        st.markdown("---")
+        st.markdown(f"**🧠 Summary:**\n{res['Summary']}")
+        st.markdown("---")
+        st.markdown(f"**📌 Missing Skills:**\n{res['Skills']}")
+        st.markdown("---")
+        st.markdown(f"**💡 Suggestions:**\n{res['Suggestions']}")
+
+        # PDF Download for selected resume
+        if st.button("📥 Download PDF for Selected Resume"):
+            pdf_path = generate_pdf(
+                res['Candidate'],
+                res['Avg'],
+                res['Scores'],
+                res['Summary'],
+                res['Skills'],
+                res['Suggestions']
+            )
+            with open(pdf_path, "rb") as f:
+                st.download_button(
+                    label="⬇️ Click to Download",
+                    data=f,
+                    file_name=f"{selected_resume}_report.pdf",
+                    mime="application/pdf"
+                )
+            st.markdown("---")
+            st.subheader("💬 Ask AI About This Resume")
+
+            with st.form("chat_form"):
+                user_query = st.text_area("Ask anything about improving this resume 👇", placeholder="E.g. How can I tailor this resume better for the job?")
+                selected_model = st.selectbox("Model to use", ["groq", "gemini"])
+                submit_chat = st.form_submit_button("🔍 Ask")
+
+            if submit_chat and user_query:
+                with st.spinner("Thinking..."):
+                    ai_response = answer_resume_query(
+                        resume_text="\n".join([doc.page_content for doc in load_and_split_resume(f"temp_files/{selected_resume}")]),
+                        jd_text="\n".join([doc.page_content for doc in load_and_split_resume(f"temp_files/{jd_file.name}")]),
+                        user_question=user_query,
+                        model=selected_model
+                    )
+                st.markdown("### 💡 AI Feedback")
+                st.success(ai_response)
+
     else:
-        st.info("⬅️ Please upload files and run analysis first from the 'Upload Files' tab.")
+        st.info("⬅️ Please upload resumes and run analysis from the 'Upload Files' tab.")
