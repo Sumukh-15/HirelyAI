@@ -19,6 +19,10 @@ groq_api_key = os.getenv("GROQ_API_KEY")
 # Streamlit config
 st.set_page_config(page_title="🧠 Hirely Pro", layout="wide")
 
+if "pdf_download_clicked" not in st.session_state:
+    st.session_state.pdf_download_clicked = False
+
+
 # CSS styling
 st.markdown("""
     <style>
@@ -41,6 +45,16 @@ st.markdown("""
         }
     </style>
 """, unsafe_allow_html=True)
+
+def clean_unicode(text):
+    return (
+        text.encode("ascii", "ignore")
+            .decode("ascii")
+            .replace("•", "-")
+            .replace("–", "-")
+            .replace("—", "-")
+    )
+
 
 # Extract PDF or text
 def extract_text(file):
@@ -222,7 +236,7 @@ def generate_pdf(candidate_name, avg_score, scores, summary, skills, suggestions
 
     pdf.set_font("Arial", size=12)
     pdf.ln(10)
-    pdf.cell(200, 10, txt=f"Candidate: {candidate_name}", ln=True)
+    pdf.cell(200, 10, txt=f"Candidate: {clean_unicode(candidate_name)}", ln=True)
     pdf.cell(200, 10, txt=f"Average Match Score: {avg_score}%", ln=True)
 
     pdf.ln(5)
@@ -231,15 +245,16 @@ def generate_pdf(candidate_name, avg_score, scores, summary, skills, suggestions
         pdf.cell(200, 10, txt=f"{model}: {score}%", ln=True)
 
     pdf.ln(5)
-    pdf.multi_cell(0, 10, f"Summary:\n{summary}")
+    pdf.multi_cell(0, 10, f"Summary:\n{clean_unicode(summary)}")
     pdf.ln(2)
-    pdf.multi_cell(0, 10, f"Missing Skills:\n{skills}")
+    pdf.multi_cell(0, 10, f"Missing Skills:\n{clean_unicode(skills)}")
     pdf.ln(2)
-    pdf.multi_cell(0, 10, f"Suggestions:\n{suggestions}")
+    pdf.multi_cell(0, 10, f"Suggestions:\n{clean_unicode(suggestions)}")
 
     output_path = "temp_files/report.pdf"
     pdf.output(output_path)
     return output_path
+
 
 
 # ==== UI with Tabs ====
@@ -337,8 +352,9 @@ with tab2:
         st.markdown("---")
         st.markdown(f"**💡 Suggestions:**\n{res['Suggestions']}")
 
-        # PDF Download for selected resume
-        if st.button("📥 Download PDF for Selected Resume"):
+        # PDF Download (independent)
+        st.markdown("### 📄 Download PDF")
+        if st.button("📥 Generate and Download PDF for Selected Resume"):
             pdf_path = generate_pdf(
                 res['Candidate'],
                 res['Avg'],
@@ -353,25 +369,24 @@ with tab2:
                     data=f,
                     file_name=f"{selected_resume}_report.pdf",
                     mime="application/pdf"
+            )
+
+        st.markdown("---")
+        st.subheader("💬 Ask AI About This Resume")
+
+        # Always-visible AI Chat Form
+        with st.form("chat_form"):
+            user_query = st.text_area("Ask anything about improving this resume 👇", placeholder="E.g. How can I tailor this resume better for the job?")
+            selected_model = st.selectbox("Model to use", ["groq", "gemini"])
+            submit_chat = st.form_submit_button("🔍 Ask")
+
+        if submit_chat and user_query:
+            with st.spinner("Thinking..."):
+                ai_response = answer_resume_query(
+                    resume_text="\n".join([doc.page_content for doc in load_and_split_resume(f"temp_files/{selected_resume}")]),
+                    jd_text="\n".join([doc.page_content for doc in load_and_split_resume(f"temp_files/{jd_file.name}")]),
+                    user_question=user_query,
+                    model=selected_model
                 )
-            st.markdown("---")
-            st.subheader("💬 Ask AI About This Resume")
-
-            with st.form("chat_form"):
-                user_query = st.text_area("Ask anything about improving this resume 👇", placeholder="E.g. How can I tailor this resume better for the job?")
-                selected_model = st.selectbox("Model to use", ["groq", "gemini"])
-                submit_chat = st.form_submit_button("🔍 Ask")
-
-            if submit_chat and user_query:
-                with st.spinner("Thinking..."):
-                    ai_response = answer_resume_query(
-                        resume_text="\n".join([doc.page_content for doc in load_and_split_resume(f"temp_files/{selected_resume}")]),
-                        jd_text="\n".join([doc.page_content for doc in load_and_split_resume(f"temp_files/{jd_file.name}")]),
-                        user_question=user_query,
-                        model=selected_model
-                    )
-                st.markdown("### 💡 AI Feedback")
-                st.success(ai_response)
-
-    else:
-        st.info("⬅️ Please upload resumes and run analysis from the 'Upload Files' tab.")
+            st.markdown("### 💡 AI Feedback")
+            st.success(ai_response)
