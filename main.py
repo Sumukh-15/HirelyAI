@@ -119,8 +119,10 @@ List the missing skills only as bullet points.
             messages=[{"role": "user", "content": prompt}]
         )
         return response.choices[0].message.content.strip()
-    except:
+    except Exception as e:
+        print("Error:", e)
         return "N/A"
+
 
 #AI Chat assistant for Resume Feedback
 
@@ -181,8 +183,10 @@ List only 3 improvement suggestions.
             messages=[{"role": "user", "content": prompt}]
         )
         return response.choices[0].message.content.strip()
-    except:
+    except Exception as e:
+        print("Error:", e)
         return "N/A"
+
 
 # Resume summary
 def generate_summary(resume_text):
@@ -199,8 +203,10 @@ Resume:
             messages=[{"role": "user", "content": prompt}]
         )
         return response.choices[0].message.content.strip()
-    except:
+    except Exception as e:
+        print("Error:", e)
         return "N/A"
+
 
 # Get match scores
 
@@ -263,7 +269,7 @@ tab1, tab2 = st.tabs(["📁 Upload Files", "📊 View Results"])
 with tab1:
     st.header("📂 Upload Resume & Job Description")
 
-    resume_files = st.file_uploader("📄 Upload Resume(s) — Upload 2 or 3 versions", type=None, accept_multiple_files=True)
+    resume_files = st.file_uploader("📄 Upload Resume(s) — Upload 2 or 3 versions", type=["pdf", "txt"], accept_multiple_files=True)
 
     jd_file = st.file_uploader("📝 Upload Job Description", type=None)
 
