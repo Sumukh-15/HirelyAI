@@ -17,34 +17,79 @@ google_api_key = os.getenv("GOOGLE_API_KEY")
 groq_api_key = os.getenv("GROQ_API_KEY")
 
 # Streamlit config
-st.set_page_config(page_title="🧠 Hirely Pro", layout="wide")
+st.set_page_config(page_title="🧠 Hirely Pro", layout="wide",page_icon="📄")
 
 if "pdf_download_clicked" not in st.session_state:
     st.session_state.pdf_download_clicked = False
 
 
-# CSS styling
+# Custom CSS Styling with animations
 st.markdown("""
     <style>
         .block-container {
             padding-top: 2rem;
-            padding-bottom: 1rem;
+            padding-bottom: 2rem;
+            background-color: black;
         }
-        .stMarkdown, .stFileUploader {
+        h1, h2, h3, h4 {
+            color: black;
+        }
+        .stMarkdown, .stFileUploader, .stButton {
             margin-bottom: 1rem;
         }
-        .metric-box {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 1rem;
+        .highlight-box {
+            padding: 1.2rem;
+            background-color: black;
+            border-left: 5px solid #0288d1;
+            border-radius: 8px;
+            margin-bottom: 1.2rem;
+            animation: fadeIn 0.6s ease-in-out;
         }
         .center {
             display: flex;
             justify-content: center;
-            margin-bottom: 1rem;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .upload-area {
+            border: 2px dashed #90caf9;
+            padding: 1.5rem;
+            border-radius: 10px;
+            background-color:black;
+            animation: fadeIn 1s ease;
         }
     </style>
 """, unsafe_allow_html=True)
+
+# Header Banner
+st.markdown("""
+    <div class="center">
+        <h1 style='font-size: 2.8rem; font-family:serif; color:#D2B48C'>🚀 Hirely Pro - Smart Resume Matcher</h1>
+    </div>
+    <p class='center' style='color:#9D825D; text-align:center; font-size: 1.2rem;font-weight:bold;font-family: Arial, Helvetica, monospace;font-style: italic;'>
+        Analyze your resume using AI, compare with job descriptions, and get personalized improvement feedback!
+    </p>
+""", unsafe_allow_html=True)
+
+
+
+# Tabs Placeholder
+st.markdown("---")
+st.markdown("""
+<div class="highlight-box">
+    <h4 style="color:#D2B48C;font-family:Papyrus,fantasy;">📌 Pro Tips to Maximize Your Results</h4>
+    <ul style="line-height: 1.6; color:white; ">
+        <li>🔄 Upload <strong>multiple resume versions</strong> to see which one aligns best with the job role.</li>
+        <li>🎯 Use a <strong>tailored job description</strong> — the more detailed, the better the AI can match.</li>
+        <li>💬 Get <strong>instant AI suggestions</strong> by asking specific improvement questions.</li>
+        <li>📄 Download a <strong>personalized PDF report</strong> to track and improve your resume fit.</li>
+    </ul>
+</div>
+""", unsafe_allow_html=True)
+
+
 
 def clean_unicode(text):
     return (
@@ -267,13 +312,14 @@ def generate_pdf(candidate_name, avg_score, scores, summary, skills, suggestions
 tab1, tab2 = st.tabs(["📁 Upload Files", "📊 View Results"])
 
 with tab1:
-    st.header("📂 Upload Resume & Job Description")
+    st.markdown("<h1 style='color:#D2B48C; font-size:2rem; font-family:Papyrus,fantasy;font-style:italic;'>📄 Upload Resume & Job Description</h1>", unsafe_allow_html=True)
+
 
     resume_files = st.file_uploader("📄 Upload Resume(s) — Upload 2 or 3 versions", type=["pdf", "txt"], accept_multiple_files=True)
 
     jd_file = st.file_uploader("📝 Upload Job Description", type=None)
 
-    if st.button("🔍 Analyze Fit") and resume_files and jd_file:
+    if st.button("🔍 Analyze Fit" , key="analyze_button_tab1") and resume_files and jd_file:
         with st.spinner("Analyzing..."):
             os.makedirs("temp_files", exist_ok=True)
 
