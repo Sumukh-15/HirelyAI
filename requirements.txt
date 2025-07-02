@@ -9,3 +9,9 @@ unstructured
 plotly
 python-docx
 fpdf
+fpdf2
+schedule
+yagmail
+beautifulsoup4
+requests
+secure-smtplib
