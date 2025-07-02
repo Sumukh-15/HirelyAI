@@ -53,3 +53,5 @@ build/
 
 # Plotly auto-save files
 *.plotly.*
+
+firebase_config.py
