@@ -1,6 +1,6 @@
 # 🧠 Hirely Pro – Your AI-Powered Career Companion
 
-![Streamlit](https://img.shields.io/badge/Built%20With-Streamlit-FF4B4B?logo=streamlit&logoColor=white) ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white) ![License](https://img.shields.io/github/license/Sumukh-15/Hirely-Pro?style=flat) ![Status](https://img.shields.io/badge/Status-In%20Progress-yellow) ![AI Models](https://img.shields.io/badge/AI-Groq%20LLaMA3%20%7C%20Gemini-blueviolet?logo=openai) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)
+![Streamlit](https://img.shields.io/badge/Built%20With-Streamlit-FF4B4B?logo=streamlit&logoColor=white) ![Python](https://img.shields.io/badge/Python-3.13.0-3776AB?logo=python&logoColor=white) ![AI Models](https://img.shields.io/badge/AI-Groq%20LLaMA3%20%7C%20Gemini-blueviolet?logo=openai) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)
 
 Welcome to **Hirely Pro**, your personalized **AI career assistant** that doesn’t just analyze resumes—it understands them.
 
@@ -99,28 +99,22 @@ Hirely-Pro/
 
 ## 🧠 Sample Prompts for ResBot
 
-```bash
-~~Ask these in the AI assistant:
+> 💬 Use these prompts inside the always-visible chat assistant:
 
-=>“What are 3 things I should improve in this resume for a software role?”
-
-=>“Is my resume strong enough for a data analyst job?”
-
-=>“What skills am I missing compared to this JD?”
-
-=>“How can I reword my project experience to look more impactful?”
-```
+> **“What are 3 things I should improve in this resume for a software role?”**  
+> **“Is my resume strong enough for a data analyst job?”**  
+> **“What skills am I missing compared to this JD?”**  
+> **“How can I reword my project experience to look more impactful?”**
 
 ---
 
-## 👨‍💻 About the Developer
-
-
-Sumukh Mallikarjuna
-Aspiring Software Engineer | Passionate about AI ✨ | Devoted to solving real-world problems with simple tech + intelligence.
-
-💼 I’m open to collaborations, internships, and AI-for-career startups.
-💬 Connect with me on ![LinkedIn](https://www.linkedin.com/in/sumukh-mallikarjuna-6553b3321/) or check out more on ![GitHub](https://github.com/Sumukh-15/)
+> ## 👨‍💻 About the Developer  
+> **Sumukh Mallikarjuna**  
+> Aspiring Software Engineer | Passionate about AI ✨  
+> Devoted to solving real-world problems with simple tech + intelligence.  
+>
+> 💼 Open to collaborations, internships, and AI-for-career startups.  
+> 💬 Connect with me on [LinkedIn](https://linkedin.com/in/sumukh-mallikarjuna) or check out more on [GitHub](https://github.com/Sumukh-15)
 
 ---
 
