@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 import pandas as pd
 import plotly.express as px
 from multi_file_ingestion import load_and_split_resume
-import plotly.graph_objects as go
 from fpdf import FPDF
 
 
@@ -165,7 +164,7 @@ List the missing skills only as bullet points.
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        print("Error:", e)
+        st.error(f"⚠️ Error: {e}")
         return "N/A"
 
 
@@ -229,7 +228,8 @@ List only 3 improvement suggestions.
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        print("Error:", e)
+        st.error(f"⚠️ Error: {e}")
+
         return "N/A"
 
 
@@ -249,7 +249,8 @@ Resume:
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        print("Error:", e)
+        st.error(f"⚠️ Error: {e}")
+
         return "N/A"
 
 
@@ -264,7 +265,8 @@ def get_google_match(prompt):
         )
         digits = ''.join(filter(str.isdigit, response.choices[0].message.content))
         return min(int(digits), 100) if digits else 0
-    except:
+    except Exception as e:
+        st.error(f"⚠️ Error: {e}")
         return 0
 
 def get_groq_match(prompt):
@@ -276,7 +278,8 @@ def get_groq_match(prompt):
         )
         digits = ''.join(filter(str.isdigit, response.choices[0].message.content))
         return min(int(digits), 100) if digits else 0
-    except:
+    except Exception as e:
+        st.error(f"⚠️ Error: {e}")
         return 0
 
 def generate_pdf(candidate_name, avg_score, scores, summary, skills, suggestions):
@@ -375,7 +378,7 @@ with tab2:
         best_resume = max(all_scores.items(), key=lambda x: x[1]["Avg"])
 
         st.subheader("📈 Best Resume Recommendation")
-        st.success(f"🏆 `{best_resume[0]}` is the best match with `{best_resume[1]['Avg']}%` score.")
+        st.success(f"🏆 {best_resume[0]} is the best match with {best_resume[1]['Avg']}% score.")
 
         resume_df = pd.DataFrame([
             {
@@ -395,8 +398,8 @@ with tab2:
         selected_resume = st.selectbox("📝 Select a Resume to View Details", list(all_scores.keys()))
         res = all_scores[selected_resume]
 
-        st.markdown(f"**👤 Candidate:** `{res['Candidate']}`")
-        st.markdown(f"**📈 Avg. Score:** `{res['Avg']}%`")
+        st.markdown(f"**👤 Candidate:** {res['Candidate']}")
+        st.markdown(f"**📈 Avg. Score:** {res['Avg']}%")
         st.markdown("---")
         st.markdown(f"**🧠 Summary:**\n{res['Summary']}")
         st.markdown("---")
