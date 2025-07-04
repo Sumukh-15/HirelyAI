@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import pandas as pd
 import plotly.express as px
 from multi_file_ingestion import load_and_split_resume
+import plotly.graph_objects as go
 from fpdf import FPDF
 
 
