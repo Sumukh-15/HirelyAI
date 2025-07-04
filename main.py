@@ -7,8 +7,14 @@ from dotenv import load_dotenv
 import pandas as pd
 import plotly.express as px
 from multi_file_ingestion import load_and_split_resume
-import plotly.graph_objects as go
 from fpdf import FPDF
+import json
+from datetime import datetime
+import re
+
+
+# Ensure chat_sessions directory exists
+os.makedirs("chat_sessions", exist_ok=True)
 
 
 # Load environment variables
@@ -17,7 +23,8 @@ google_api_key = os.getenv("GOOGLE_API_KEY")
 groq_api_key = os.getenv("GROQ_API_KEY")
 
 # Streamlit config
-st.set_page_config(page_title="🧠 Hirely Pro", layout="wide",page_icon="📄")
+st.set_page_config(page_title="🧠 Hirely AI", layout="wide",page_icon="📄")
+
 
 if "pdf_download_clicked" not in st.session_state:
     st.session_state.pdf_download_clicked = False
@@ -60,13 +67,38 @@ st.markdown("""
             background-color:black;
             animation: fadeIn 1s ease;
         }
+        .chat-message {
+            border-radius: 8px;
+            padding: 10px 15px;
+            margin: 5px 0;
+            color: white;
+        }
+        .chat-message.user {
+            background-color: #1e88e5;
+            text-align: right;
+        }
+        .chat-message.assistant {
+            background-color: #43a047;
+            text-align: left;
+        }
+        .sticky-chat {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #111;
+            padding: 1rem;
+            z-index: 9999;
+            border-top: 2px solid #444;
+        }
+
     </style>
 """, unsafe_allow_html=True)
 
 # Header Banner
 st.markdown("""
     <div class="center">
-        <h1 style='font-size: 2.8rem; font-family:serif; color:#D2B48C'>🚀 Hirely Pro - Smart Resume Matcher</h1>
+        <h1 style='font-size: 2.8rem; font-family:serif; color:#D2B48C;text-align:center;'>🚀 Hirely AI - Smart Resume Matcher</h1>
     </div>
     <p class='center' style='color:#9D825D; text-align:center; font-size: 1.2rem;font-weight:bold;font-family: Arial, Helvetica, monospace;font-style: italic;'>
         Analyze your resume using AI, compare with job descriptions, and get personalized improvement feedback!
@@ -184,7 +216,8 @@ Job Description:
 Question:
 {user_question}
 
-Answer in a clear, personalized, helpful tone.
+Give an answer like a friendly career coach. Include examples, avoid generic advice, and use a helpful, human tone.
+
 """
     try:
         if model == "groq":
@@ -311,6 +344,67 @@ def generate_pdf(candidate_name, avg_score, scores, summary, skills, suggestions
     return output_path
 
 
+def save_chat_to_file(history, filename):
+    path = os.path.join("chat_history", filename)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False, indent=2)
+
+def load_chat_from_file(filename):
+    path = os.path.join("chat_history", filename)
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+
+def list_chat_sessions():
+    return [f for f in os.listdir("chat_sessions") if f.endswith(".json")]
+
+
+with st.sidebar:
+    st.markdown("## 🗂️ Chat Sessions")
+
+    os.makedirs("chat_history", exist_ok=True)
+
+    # Load chat files & titles
+    chat_files = sorted([
+        f for f in os.listdir("chat_history")
+        if f.endswith(".json") and not f.endswith("_meta.json")
+    ])
+
+    session_map = {}
+    for f in chat_files:
+        meta_path = f.replace(".json", "_meta.json")
+        title = f.replace(".json", "").replace("chat_", "").replace("_", " ").capitalize()
+        try:
+            with open(os.path.join("chat_history", meta_path), "r") as meta_file:
+                meta = json.load(meta_file)
+                title = meta.get("title", title)
+        except:
+            pass
+        session_map[title] = f
+
+    selected_title = st.selectbox("📁 Load Chat Session", ["(New Chat)"] + list(session_map.keys()))
+
+    if selected_title == "(New Chat)":
+        st.session_state.chat_history = []
+        st.session_state.current_session = None
+        st.session_state.session_title = None
+    else:
+        st.session_state.chat_history = load_chat_from_file(session_map[selected_title])
+        st.session_state.current_session = session_map[selected_title]
+        st.session_state.session_title = selected_title
+
+    if st.button("🗑️ Delete All History"):
+        for file in os.listdir("chat_history"):
+            os.remove(os.path.join("chat_history", file))
+        st.success("✅ Deleted all chat sessions. Please refresh to update.")
+
+
+def slugify(text, max_words=6):
+    text = re.sub(r'[^\w\s-]', '', text).strip().lower()
+    words = text.split()[:max_words]
+    return "_".join(words)
 
 # ==== UI with Tabs ====
 tab1, tab2 = st.tabs(["📁 Upload Files", "📊 View Results"])
@@ -427,22 +521,71 @@ with tab2:
                     mime="application/pdf"
             )
 
-        st.markdown("---")
-        st.subheader("💬 Ask AI About This Resume")
 
-        # Always-visible AI Chat Form
-        with st.form("chat_form"):
-            user_query = st.text_area("Ask anything about improving this resume 👇", placeholder="E.g. How can I tailor this resume better for the job?")
-            selected_model = st.selectbox("Model to use", ["groq", "gemini"])
-            submit_chat = st.form_submit_button("🔍 Ask")
+st.markdown("---")
+st.subheader("💬 Ask AI About This Resume")
 
-        if submit_chat and user_query:
-            with st.spinner("Thinking..."):
-                ai_response = answer_resume_query(
-                    resume_text="\n".join([doc.page_content for doc in load_and_split_resume(f"temp_files/{selected_resume}")]),
-                    jd_text="\n".join([doc.page_content for doc in load_and_split_resume(f"temp_files/{jd_file.name}")]),
-                    user_question=user_query,
-                    model=selected_model
-                )
-            st.markdown("### 💡 AI Feedback")
-            st.success(ai_response)
+# Always-visible AI Chat Form
+st.markdown("## 🤖 ResBot - Your AI Resume Assistant")
+st.caption("Chat live with your AI assistant to refine your resume.")
+
+# Initialize history
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
+# Display past messages
+for chat in st.session_state.chat_history:
+    st.chat_message("user").markdown(chat["user"])
+    st.chat_message("assistant").markdown(chat["assistant"])
+
+col1, col2 = st.columns([5, 1])  # 5:1 ratio for input vs dropdown
+
+with col1:
+    user_prompt = st.chat_input("Ask your resume question here...")
+
+with col2:
+    selected_model = st.selectbox(
+        "Model", 
+        options=["groq", "gemini"], 
+        index=0,
+        label_visibility="collapsed"
+    )
+
+if user_prompt:
+    with st.spinner("Thinking..."):
+        resume_text = "\n".join([doc.page_content for doc in load_and_split_resume(f"temp_files/{selected_resume}")])
+        jd_text = "\n".join([doc.page_content for doc in load_and_split_resume(f"temp_files/{jd_file.name}")])
+
+        ai_response = answer_resume_query(
+            resume_text=resume_text,
+            jd_text=jd_text,
+            user_question=user_prompt,
+            model=selected_model
+        )
+
+    # 🔥 Auto-generate session title from first question
+    if st.session_state.current_session is None:
+        slug = slugify(user_prompt)
+        title_readable = " ".join(user_prompt.strip().split()[:6]).capitalize()
+        file_name = f"chat_{slug}.json"
+        st.session_state.current_session = file_name
+        st.session_state.session_title = title_readable
+
+        # Save a metadata file mapping filename → title
+        meta = {"title": title_readable}
+        with open(os.path.join("chat_history", file_name.replace('.json', '_meta.json')), "w") as f:
+            json.dump(meta, f)
+
+    # ✅ Save chat
+    chat_pair = {"user": user_prompt, "assistant": ai_response}
+    st.session_state.chat_history.append(chat_pair)
+    save_chat_to_file(st.session_state.chat_history, st.session_state.current_session)
+
+    # Show messages
+    st.chat_message("user").markdown(user_prompt)
+    st.chat_message("assistant").markdown(ai_response)
+
+
+if st.button("🧹 Clear Chat History"):
+    st.session_state.chat_history = []
+    st.success("Chat history cleared.")
