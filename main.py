@@ -552,38 +552,51 @@ with col2:
     )
 
 if user_prompt:
-    with st.spinner("Thinking..."):
-        resume_text = "\n".join([doc.page_content for doc in load_and_split_resume(f"temp_files/{selected_resume}")])
-        jd_text = "\n".join([doc.page_content for doc in load_and_split_resume(f"temp_files/{jd_file.name}")])
+    if "all_scores" in st.session_state and "jd_file" in locals():
+        # Use fallback resume if selected_resume is not accessible here
+        selected_resume = list(st.session_state.all_scores.keys())[0]
 
-        ai_response = answer_resume_query(
-            resume_text=resume_text,
-            jd_text=jd_text,
-            user_question=user_prompt,
-            model=selected_model
-        )
+        try:
+            with st.spinner("Thinking..."):
+                resume_path = f"temp_files/{selected_resume}"
+                jd_path = f"temp_files/{jd_file.name}"
 
-    # 🔥 Auto-generate session title from first question
-    if st.session_state.current_session is None:
-        slug = slugify(user_prompt)
-        title_readable = " ".join(user_prompt.strip().split()[:6]).capitalize()
-        file_name = f"chat_{slug}.json"
-        st.session_state.current_session = file_name
-        st.session_state.session_title = title_readable
+                resume_text = "\n".join([doc.page_content for doc in load_and_split_resume(resume_path)])
+                jd_text = "\n".join([doc.page_content for doc in load_and_split_resume(jd_path)])
 
-        # Save a metadata file mapping filename → title
-        meta = {"title": title_readable}
-        with open(os.path.join("chat_history", file_name.replace('.json', '_meta.json')), "w") as f:
-            json.dump(meta, f)
+                ai_response = answer_resume_query(
+                    resume_text=resume_text,
+                    jd_text=jd_text,
+                    user_question=user_prompt,
+                    model=selected_model
+                )
 
-    # ✅ Save chat
-    chat_pair = {"user": user_prompt, "assistant": ai_response}
-    st.session_state.chat_history.append(chat_pair)
-    save_chat_to_file(st.session_state.chat_history, st.session_state.current_session)
+            # 🔥 Auto-generate session title from first question
+            if st.session_state.current_session is None:
+                slug = slugify(user_prompt)
+                title_readable = " ".join(user_prompt.strip().split()[:6]).capitalize()
+                file_name = f"chat_{slug}.json"
+                st.session_state.current_session = file_name
+                st.session_state.session_title = title_readable
 
-    # Show messages
-    st.chat_message("user").markdown(user_prompt)
-    st.chat_message("assistant").markdown(ai_response)
+                # Save a metadata file mapping filename → title
+                meta = {"title": title_readable}
+                with open(os.path.join("chat_history", file_name.replace('.json', '_meta.json')), "w") as f:
+                    json.dump(meta, f)
+
+            # ✅ Save chat
+            chat_pair = {"user": user_prompt, "assistant": ai_response}
+            st.session_state.chat_history.append(chat_pair)
+            save_chat_to_file(st.session_state.chat_history, st.session_state.current_session)
+
+            # Show messages
+            st.chat_message("user").markdown(user_prompt)
+            st.chat_message("assistant").markdown(ai_response)
+
+        except Exception as e:
+            st.error(f"⚠️ Failed to process chat. Error: {str(e)}")
+    else:
+        st.warning("⚠️ Please upload and analyze at least one resume and JD first.")
 
 
 if st.button("🧹 Clear Chat History"):
