@@ -1,11 +1,9 @@
 streamlit
-pandas
 openai
-python-dotenv
 pdfplumber
-langchain
+python-dotenv
+pandas
 plotly
-python-docx
 fpdf
-
-
+langchain
+langchain-community
