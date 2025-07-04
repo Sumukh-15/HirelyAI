@@ -8,6 +8,12 @@ Designed for job seekers, students, and career coaches, **Hirely Pro** goes beyo
 
 > ✨ Developed by **Sumukh Mallikarjuna**, this project merges AI, career analytics, and user-friendly design to help you land your dream job smarter, not harder.
 
+
+## Wait a minute🙋‍♂️
+### Have a look at the live app:
+
+[HirelyAI-Smart Resume Matcher](https://hirelyai.streamlit.app/)
+
 ---
 
 ## 🎁 Why Hirely Pro Is Different
